@@ -59,33 +59,88 @@
         } catch (err) {
           result.innerText = 'Erro de rede: ' + err.message;
         }
+      } else if (urlInput) {<!DOCTYPE html><html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uploader para GoFile</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f7f7f7;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type="file"], input[type="text"], button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    #result {
+      margin-top: 20px;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h2>↑ Enviar vídeo para o GoFile</h2>  <input type="file" id="fileInput" accept="video/*">
+  <p style="text-align: center;">Ou</p>
+  <input type="text" id="urlInput" placeholder="Cole um link .mp4 aqui"><button onclick="uploadFile()">Enviar</button>
+
+  <div id="result"></div>  <script>
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const urlInput = document.getElementById('urlInput').value.trim();
+      const result = document.getElementById('result');
+      result.innerHTML = '<strong>Enviando...</strong>';
+
+      let file;
+      if (fileInput.files.length > 0) {
+        file = fileInput.files[0];
       } else if (urlInput) {
         try {
           const response = await fetch(urlInput);
           const blob = await response.blob();
-          const file = new File([blob], "video.mp4", { type: blob.type });
-
-          const formData = new FormData();
-          formData.append('file', file);
-
-          const res = await fetch('https://api.gofile.io/uploadFile', {
-            method: 'POST',
-            body: formData
-          });
-
-          const data = await res.json();
-          if (data.status === 'ok') {
-            const link = data.data.downloadPage;
-            const directLink = data.data.directLink;
-            result.innerHTML = `✅ <strong>Link do GoFile:</strong><br><a href="${link}" target="_blank">${link}</a><br><br>🔗 <strong>Link direto (.mp4):</strong><br><a href="${directLink}" target="_blank">${directLink}</a>`;
-          } else {
-            result.innerHTML = `❌ Erro: ${data.status}<br>${data?.data?.message || 'Erro desconhecido'}`;
-          }
+          file = new File([blob], "video.mp4", { type: blob.type });
         } catch (e) {
           result.innerText = 'Erro ao baixar o link fornecido: ' + e.message;
+          return;
         }
       } else {
         result.innerText = 'Escolha um arquivo ou cole um link.';
+        return;
+      }
+
+      try {
+        const serverRes = await fetch('https://api.gofile.io/getServer');
+        const serverData = await serverRes.json();
+        if (serverData.status !== 'ok') throw new Error('Erro ao obter servidor');
+
+        const server = serverData.data.server;
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadRes = await fetch(`https://${server}.gofile.io/uploadFile`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const uploadData = await uploadRes.json();
+
+        if (uploadData.status === 'ok') {
+          const pageLink = uploadData.data.downloadPage;
+          const directLink = uploadData.data.directLink || '(aguarde processamento no GoFile)';
+          result.innerHTML = `✅ <strong>Link do GoFile:</strong><br><a href="${pageLink}" target="_blank">${pageLink}</a><br><br>🔗 <strong>Link direto (.mp4):</strong><br><a href="${directLink}" target="_blank">${directLink}</a>`;
+        } else {
+          result.innerHTML = `❌ Erro: ${uploadData.status}<br>${uploadData?.data?.message || 'Erro desconhecido'}`;
+        }
+      } catch (err) {
+        result.innerText = 'Erro de rede ou de API: ' + err.message;
       }
     }
   </script></body>
