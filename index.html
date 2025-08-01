@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="UTF-8"><title>Uploader GoFile</title></head>
+<body>
+  <h2>Enviar vídeo para o GoFile</h2>
+  <input type="file" id="fileInput"><br>
+  <input type="text" id="urlInput" placeholder="Ou cole um link .mp4"><br>
+  <button onclick="uploadFile()">Enviar</button>
+  <div id="result"></div>
+<script>
+async function uploadFile(){
+let r=document.getElementById('result');r.innerText='Enviando...';
+let f=document.getElementById('fileInput').files[0],u=document.getElementById('urlInput').value;
+if(f){
+let d=new FormData();d.append('file',f);
+let res=await fetch('https://api.gofile.io/uploadFile',{method:'POST',body:d});
+let j=await res.json();r.innerHTML='✅ Link: <a href=\"'+j.data.downloadPage+'\">'+j.data.downloadPage+'</a>';
+}else if(u){
+try{let b=await(await fetch(u)).blob(),nf=new File([b],'video.mp4',{type:b.type});
+let d=new FormData();d.append('file',nf);
+let res=await fetch('https://api.gofile.io/uploadFile',{method:'POST',body:d});
+let j=await res.json();r.innerHTML='✅ Link: <a href=\"'+j.data.downloadPage+'\">'+j.data.downloadPage+'</a>';
+}catch(e){r.innerText='Erro ao carregar o link.'}
+}else{r.innerText='Escolha um arquivo ou cole um link .mp4'}
+}
+</script>
+</body>
+</html>
